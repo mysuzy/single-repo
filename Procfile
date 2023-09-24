@@ -1,1 +1,1 @@
-worker: python main_car.py
+web: python main_car.py
