@@ -1,4 +1,5 @@
 import requests
+import time
 from bs4 import BeautifulSoup
 from airtable import insert_line, connect_to_table, fetch_all
 from pyairtable.utils import attachment
@@ -98,8 +99,12 @@ def parse_page(url, base_id, table_name):
         return False
 
 
+
 # Press the green button in the gutter to run the script.
-if __name__ == '__main__':
+# if __name__ == '__main__':
+def run():
+    global STOP
+    STOP = False
     for number in range(1, 40):
         if not STOP:
             url = f"https://www.radiokorea.com/bulletin/bbs/board.php?bo_table=c_realestate&page={number}"
@@ -107,7 +112,11 @@ if __name__ == '__main__':
             base_id = 'appEFU0dGebqwXavr'
             table_name = 'tbliy81ve2bjUb3it'
             result = parse_page(url, base_id, table_name)
+            #print("House:",result)
             if not result:
                 STOP = True
+    #time.sleep(5)  # 1000 = 16min, 10000 seconds = 2.7 hours
+    #print("House stop:", STOP)
+    #print("House:", time.ctime())
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
