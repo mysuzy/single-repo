@@ -1,4 +1,5 @@
 from pyairtable import Api
+from pyairtable.formulas import match
 
 def connect_to_table(api_key, base_id, table_name):
     api = Api(api_key)
@@ -21,6 +22,16 @@ def fetch_all(table):
         return False
 
     return result
+
+
+def delete_line(table,entities):
+    try:
+        table.batch_delete(entities)
+    except Exception as e:
+        print(e)
+        return False
+    return True
+
 
 if __name__ == '__main__':
     API_KEY = "patqmwV7hrU86hqYI.27fd1e12ce830b4306ac7bf5658fcb1929804783df1d4c3a0b579110e22a6b78"

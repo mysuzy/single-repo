@@ -1,7 +1,7 @@
 import requests
 import time
 from bs4 import BeautifulSoup
-from airtable import insert_line, connect_to_table, fetch_all
+from airtable import insert_line, connect_to_table, fetch_all, delete_line
 from pyairtable.utils import attachment
 from datetime import datetime
 from dateutil.parser import parse as date_parse
@@ -24,6 +24,8 @@ def parse_page(url, base_id, table_name):
     already_registered = fetch_all(table)
     already_registered = [x['fields']['내용'] for x in already_registered]
     candidates = []
+    del_candidates = []
+
     for li in result.find_all('li'):
         if li.find(class_='title_info') is not None or li.find(class_='aoa') is not None:
             continue
@@ -101,10 +103,26 @@ def parse_page(url, base_id, table_name):
     print(candidates)
     if candidates:
         insert_line(table, candidates)
+        records = table.all(sort=['올린 날짜'])
+        delete(records, del_candidates, table, candidates)
         return True
     else:
         return False
 
+def delete(records, del_candidates, table, candidates):
+    count = 0
+
+    for i in records:
+        #print("올린 날짜:", i['fields']['올린 날짜'])
+        #datetime.now() - date_parse(i['fields']['올린 날짜'])).days >= 7
+        obj = {i['id']}
+        del_candidates.append(obj)
+        if count == len(candidates)-1:
+            print("car_del_candidates", len(candidates), del_candidates)
+            break
+        count += 1
+        time.sleep(5)  # 1000 = 16min, 10000 seconds = 2.7 hours
+    print("car_delete_line:",delete_line(table, del_candidates))
 
 # Press the green button in the gutter to run the script.
 #if __name__ == '__main__':
