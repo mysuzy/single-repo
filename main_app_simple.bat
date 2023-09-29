@@ -1,0 +1,2 @@
+python main_app_simple.py
+pause
