@@ -1,1 +1,1 @@
-worker: python main_car.py
+worker: python main_app.py
