@@ -115,7 +115,7 @@ def delete(records, del_candidates, table, candidates):
             break
         count += 1
         time.sleep(5)  # 1000 = 16min, 10000 seconds = 2.7 hours
-    print("car_delete_line:", delete_line(table, del_candidates))
+    print("house_delete_line:", delete_line(table, del_candidates))
 
 
 # Press the green button in the gutter to run the script.
