@@ -22,7 +22,14 @@ def parse_page(url, base_id, table_name):
     result = bs4.find('ul', class_="board_list")
 
     already_registered = fetch_all(table)
-    already_registered = [x['fields']['내용'] for x in already_registered if x['fields'].get('내용') ]
+
+    # 502 Server Error: Bad Gateway for url
+    # error handling => TypeError: 'bool' object is not iterable
+    if already_registered:
+        already_registered = [x['fields']['내용'] for x in already_registered if x['fields'].get('내용') ]
+    else:
+        already_registered = []
+
     candidates = []
     del_candidates = []
 
@@ -62,7 +69,9 @@ def parse_page(url, base_id, table_name):
         items = item_soup.find(class_='feature100p')
         if items is None:
             items = item_soup.find(class_='feature')
-        items = items.find_all('div', class_='item')
+            items = items.find_all('div', class_='item')
+        else:  # error handling => AttributeError: 'NoneType' object has no attribute 'find_all'
+            continue
 
         for item in items:
             if item.find('div', class_='title') is None or item.find('div', class_='detail') is None:

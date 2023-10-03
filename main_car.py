@@ -22,7 +22,14 @@ def parse_page(url, base_id, table_name):
     result = bs4.find('ul', class_="board_list")
 
     already_registered = fetch_all(table)
-    already_registered = [x['fields']['내용'] for x in already_registered]
+
+    # 502 Server Error: Bad Gateway for url
+    # error handling => TypeError: 'bool' object is not iterable
+    if already_registered:
+        already_registered = [x['fields']['내용'] for x in already_registered]
+    else:
+        already_registered = []
+
     candidates = []
     del_candidates = []
 
@@ -67,6 +74,7 @@ def parse_page(url, base_id, table_name):
         item_response = requests.get(item_url)
         item_soup = BeautifulSoup(item_response.content, 'html.parser')
         items = item_soup.find(class_='feature100p')
+
         if items is None:
             items = item_soup.find(class_='feature')
         item_detail = items.find('div', class_='detail')
