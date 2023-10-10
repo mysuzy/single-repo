@@ -6,9 +6,9 @@ import missyusa.main_car
 
 if __name__ == '__main__':
     while True:
-        #main_house.run()
-        #main_car.run()
-        #main_secondHand.run()
+        main_house.run()
+        main_car.run()
+        main_secondHand.run()
 
         missyusa.main_car.m_run()
         print("main_app called @", time.ctime())
