@@ -64,6 +64,7 @@ def parse_page(url, base_id, table_name):
         item_response = requests.get(item_url)
         item_soup = BeautifulSoup(item_response.content, 'html.parser')
         items = item_soup.find(class_='feature100p')
+
         if items is None:
             items = item_soup.find(class_='feature')
             items = items.find_all('div', class_='item')

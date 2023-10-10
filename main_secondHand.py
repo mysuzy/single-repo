@@ -69,8 +69,13 @@ def parse_page(url, base_id, table_name):
         items = item_soup.find(class_='feature100p')
         if items is None:
             items = item_soup.find(class_='feature')
-            items = items.find_all('div', class_='item')
+            # items = items.find_all('div', class_='item')  #error test
         else:  # error handling => AttributeError: 'NoneType' object has no attribute 'find_all'
+            continue
+
+        if items is not None:
+            items = items.find_all('div', class_='item')  #error test
+        else:
             continue
 
         for item in items:

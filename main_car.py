@@ -77,7 +77,13 @@ def parse_page(url, base_id, table_name):
 
         if items is None:
             items = item_soup.find(class_='feature')
-        item_detail = items.find('div', class_='detail')
+        else:  #error test
+            continue
+
+        if items is not None:
+            item_detail = items.find('div', class_='detail')
+        else:
+            continue
 
         for item in item_detail.find_all('ul'):
             for li in item.find_all('li'):
