@@ -82,7 +82,7 @@ def parse_page(url, base_id, table_name):
         items = item_soup.find('div', id='post_cont')
         #print("#80", items)
         if items is None:
-            items = item_soup.find_all('basic_tbl')
+            items = item_soup.find('basic_tbl')
             #print("#83", items)
             if items is not None:
                 item_detail = items.find_all('tr')
