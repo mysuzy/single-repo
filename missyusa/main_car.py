@@ -32,13 +32,10 @@ def parse_page(url, base_id, table_name):
 
     candidates = []
     del_candidates = []
-    #print("35 start: ", already_registered, "end")
+
     count= 0
     #1. from list page
     for li in result.find_all('li'):
-        #print("37", li.select_one('a > span:nth-child(2)').get_text() )
-        #if li.select_one('a > span:nth-child(2)') is not None: #or li.find(class_='aoa') is not None
-        #    continue
 
         subject = li.select_one('a > span:nth-child(2)').get_text() #pr_title_thum
         #print("42", subject)
@@ -73,108 +70,96 @@ def parse_page(url, base_id, table_name):
         prefix = "https://m.musalist.com:441/mainpage"
         item_url = prefix + postfix
 
-        if 'sca' in item_url:
-            continue
-        #print("78 item_url", count, ":", item_url)
         item_response = requests.get(item_url)
-        item_soup = BeautifulSoup(item_response.content, 'html.parser') #result = bs4.find('ul', class_="pr_list")
+        item_soup = BeautifulSoup(item_response.content, 'html.parser')
 
         items = item_soup.find('div', id='post_cont')
         #print("#80", items)
         if items is None:
             items = item_soup.find('basic_tbl')
             #print("#83", items)
-            if items is not None:
-                item_detail = items.find_all('tr')
-
-                # 2. from detail page
-                # obj = {'차량정보': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date, '주행거리': miles, '연식': age}
-                for item in item_detail:
-                    # for li in item.select("td:nth-child(1)"):
-                    # print("92:", item.text)
-                    if '작성일' in item.text:
-                        detail = item.text.split('\n작성일')[0]
-                        title = '올린 날짜'
-                    if '주행거리' in item.text:
-                        detail = item.text.split('\n')[2]
-                        title = "주행거리"
-                        obj[title] = float(detail.replace(" mi", ""))
-                        # print("93 ", detail)
-                    if '연식' in item.text:
-                        detail = item.text.split('\n')[2]  # 연식(Year)
-                        title = "연식"
-                        obj[title] = int(detail)
-                        # print("94 ", detail)
-                    if '이름' in item.text:
-                        detail = item.text.split('\n')[2].replace("쪽지", "") + " " + writer.replace("\n", "")
-                        title = "글쓴이"
-                        obj[title] = detail
-                    if '전화번호' in item.text:  # 전화번호
-                        detail = item.text.split('\n')[2]
-                        title = "연락처"
-                        obj[title] = detail
-                    if '이메일' in item.text:  # 전화번호
-                        detail = item.text.split('\n')[2]
-                        title = "이메일"
-                        obj[title] = detail
-                    if '색상' in item.text:
-                        detail = item.text.split('\n')[2]
-                        title = "색상"
-                        obj[title] = detail
-                    if '상태' in item.text:
-                        detail = item.text.split('\n')[2]
-                        title = "사고여부/타이틀"
-                    else:
-                        if item.text.count('\n') > 1:
-                            title, detail = "", item.text.split('\n')[2]
-                        else:
-                            title, detail = "", item.text.split('\n')[0]
-                    ##title = title.replace('·', '').strip()
-                    if title in ['사고여부/타이틀', '올린 날짜', '연락처', '색상']:
-                        obj[title] = detail
-                    if title in ['이메일']:
-                        obj['연락처'] = obj['연락처'] + "(email:" + detail + ")"
-                        # print("129",obj)
-
-                desc = item_soup.find('div', class_='detail_content')
-
-                obj['내용'] = desc.text.strip().replace('\n', '\\n').strip()
-                if obj['내용'] in already_registered or obj['내용'] in candidates:
-                    # print("104", obj['내용'])
-                    continue
-                obj['원문 링크'] = item_url
-                obj['내용'] = desc.text
-                print("148:", desc.text)
-
-                # subject = li.select_one('a > span:nth-child(2)').get_text()
-                img_url = item_soup.find('span', class_='zoomimg')
-                # print("149",img_url)
-                if img_url is not None:
-                    postfix = img_url.find('img').attrs['src'][36:]
-                    # print("150:", postfix)
-                    image_prefix = "https://m.musalist.com:441/fileServer/ImageServer/upload/busi2"
-                    image = image_prefix + postfix
-                else:
-                    image = DEFAULT_CAR_IMAGE
-                image = attachment(image)
-
-                obj['image'] = [image]
-                candidates.append(obj)
-                print("117:", obj)
-
-            else:
-                continue
+        item_detail = items.find_all('tr')
         #print("#85", item_detail)
 
+        #2. from detail page
+        #obj = {'차량정보': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date, '주행거리': miles, '연식': age}
+        for item in item_detail:
+            email = ""
+            phone = ""
+            #print("92:", item.text)
+            if '작성일' in item.text:
+                detail = item.text.split('\n작성일')[0]
+                title = '올린 날짜'
+            if '주행거리' in item.text:
+                detail = item.text.split('\n')[2]
+                title = "주행거리"
+                obj[title] = float(detail.replace(" mi", ""))
+                # print("93 ", detail)
+            if '연식' in item.text:
+                detail = item.text.split('\n')[2]  # 연식(Year)
+                title = "연식"
+                obj[title] = int(detail)
+                # print("94 ", detail)
+            if '이름' in item.text:
+                detail = item.text.split('\n')[2].replace("쪽지", "") + " " + writer.replace("\n", "")
+                title = "글쓴이"
+                obj[title] = detail
+            if '전화번호' in item.text:  # 전화번호
+                detail = item.text.split('\n')[2]
+                title = "연락처"
+                phone = detail
+                obj[title] = detail
+            if '이메일' in item.text:  # 전화번호
+                detail = item.text.split('\n')[2]
+                email = detail
+            if '색상' in item.text:
+                detail = item.text.split('\n')[2]
+                title = "색상"
+                obj[title] = detail
+            if '상태' in item.text:
+                detail = item.text.split('\n')[2]
+                title = "사고여부/타이틀"
+            else:
+                if item.text.count('\n') > 1:
+                    title, detail = "", item.text.split('\n')[2]
+                else:
+                    title, detail = "", item.text.split('\n')[0]
+            ##title = title.replace('·', '').strip()
+            if title in ['사고여부/타이틀', '올린 날짜', '연락처', '색상']:
+                obj[title] = detail
+                if '연락처' in title:
+                    obj[title] = phone+"/"+email
+                #print("129",obj)
 
+        desc = item_soup.find('div', class_='detail_content')
 
-    #print("119:candidates:", candidates)
+        obj['내용'] = desc.text.strip().replace('\n', '\\n').strip()
+        if obj['내용'] in already_registered or obj['내용'] in candidates:
+            #print("104", obj['내용'])
+            continue
+        obj['원문 링크'] = item_url
+
+        img_url = item_soup.find('span', class_='zoomimg')
+
+        if img_url is not None:
+            postfix = img_url.find('img').attrs['src'][36:]
+            image_prefix = "https://m.musalist.com:441/fileServer/ImageServer/upload/busi2"
+            image = image_prefix + postfix
+        else:
+            image = DEFAULT_CAR_IMAGE
+        image = attachment(image)
+
+        obj['image'] = [image]
+        candidates.append(obj)
+        #print("117mcar:", obj)
+
+    print("119mcar:candidates:", candidates)
 
     if candidates:
         insert_line(table, candidates)
         records = table.all(sort=['올린 날짜'])
-        #print("122", records)
-        delete(records, del_candidates, table, candidates)
+        if len(records) >= 60:
+            delete(records, del_candidates, table, candidates)
         return True
     else:
         return False
@@ -202,7 +187,7 @@ def m_run():
     for number in range(1, 40):
         if not STOP:
             url = f"https://m.musalist.com:441/mainpage/boards/board_list.asp?section=cars&id=busi2&wflag=C&page={number}"
-            print(url)
+            print("5:", url)
             base_id = 'appEFU0dGebqwXavr'
             table_name = 'tbloMaYMXxcM4NrAd'
             result = parse_page(url, base_id, table_name)

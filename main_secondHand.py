@@ -114,7 +114,8 @@ def parse_page(url, base_id, table_name):
     if candidates:
         insert_line(table, candidates)
         records = table.all(sort=['올린 날짜'])
-        delete(records, del_candidates, table, candidates)
+        if len(records) >= 490:
+            delete(records, del_candidates, table, candidates)
         return True
     else:
         return False
@@ -142,7 +143,7 @@ def run():
     for number in range(1, 40):
         if not STOP:
             url = f"https://www.radiokorea.com/bulletin/bbs/board.php?bo_table=c_forsale&page={number}"
-            print(url)
+            print("3:", url)
             base_id = 'appEFU0dGebqwXavr'
             table_name = 'tblutDQcpqrz2PdpL'
             result = parse_page(url, base_id, table_name)
