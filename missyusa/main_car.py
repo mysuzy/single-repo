@@ -105,7 +105,7 @@ def parse_page(url, base_id, table_name):
                 title = "글쓴이"
                 obj[title] = detail
             if '전화번호' in item.text:  # 전화번호
-                detail = item.text.split('\n')[2]
+                detail = item.text.split('\n')[3].replace(" ", "")
                 title = "연락처"
                 phone = detail
                 obj[title] = detail
@@ -145,6 +145,8 @@ def parse_page(url, base_id, table_name):
             postfix = img_url.find('img').attrs['src'][36:]
             image_prefix = "https://m.musalist.com:441/fileServer/ImageServer/upload/busi2"
             image = image_prefix + postfix
+            if image_prefix.find("fileServer/ImageServer/upload/busi2") == -1:
+                image = "https://m.musalist.com:441/mainpage/image/photo580_435.gif"
         else:
             image = DEFAULT_CAR_IMAGE
         image = attachment(image)
