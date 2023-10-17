@@ -117,8 +117,10 @@ def parse_page(url, base_id, table_name):
                 title = "색상"
                 obj[title] = detail
             if '상태' in item.text:
-                detail = item.text.split('\n')[2]
-                title = "사고여부/타이틀"
+                if item.text.count('\n') > 1:
+                    title, detail = "사고여부/타이틀", item.text.split('\n')[2]
+                else:
+                    title, detail = "사고여부/타이틀", item.text.split('\n')[0]
             else:
                 if item.text.count('\n') > 1:
                     title, detail = "", item.text.split('\n')[2]
