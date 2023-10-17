@@ -129,6 +129,8 @@ def parse_page(url, base_id, table_name):
             postfix = img_url.find('img').attrs['src'][36:]
             image_prefix = "https://m.musalist.com:441/fileServer/ImageServer/upload/busi3"
             image = image_prefix + postfix
+            if image_prefix.find("fileServer/ImageServer/upload/") == -1:
+                image = "https://m.musalist.com:441/mainpage/image/photo580_435.gif"
         else:
             image = DEFAULT_HOUSE_IMAGE
         image = attachment(image)
