@@ -58,7 +58,7 @@ def parse_page(url, base_id, table_name):
                 postfix = li.find('a').attrs['href'][2:]
             prefix = "https://www.radiokorea.com/bulletin"
             item_url = prefix + postfix
-            print("house url", item_url)
+            #print("house url", item_url)
             if 'sca' in item_url:
                 continue
 
