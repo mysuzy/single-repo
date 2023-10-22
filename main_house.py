@@ -15,106 +15,110 @@ STOP = False
 
 
 def parse_page(url, base_id, table_name):
-    table = connect_to_table(API_KEY, base_id, table_name)
+    try:
+        table = connect_to_table(API_KEY, base_id, table_name)
+        response = requests.get(url)
 
-    response = requests.get(url)
-    bs4 = BeautifulSoup(response.content, 'html.parser')
-    result = bs4.find('ul', class_="board_list")
+        bs4 = BeautifulSoup(response.content, 'html.parser')
+        result = bs4.find('ul', class_="board_list")
 
-    already_registered = fetch_all(table)
+        already_registered = fetch_all(table)
 
-    # 502 Server Error: Bad Gateway for url
-    # error handling => TypeError: 'bool' object is not iterable
-    if already_registered:
-        already_registered = [x['fields']['내용'] for x in already_registered if x['fields'].get('내용') ]
-    else:
-        already_registered = []
-
-    candidates = []
-    del_candidates = []
-
-    for li in result.find_all('li'):
-        if li.find(class_="title_subject") is not None or li.find(class_='subject') is None:
-            continue
-        subject = li.find(class_='subject').text
-        price = float(li.find(class_='price').text.replace('$', '').replace(',', ''))
-        writer = li.find(class_='writer').text
-        date = li.find(class_='date').text
-
-        STOP = (datetime.now() - date_parse(date)).days >= 7
-        if STOP:
-            break
-
-        obj = {'제목': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date}
-
-        if li.find('a').attrs['href'] is None:
-            continue
-
-        if 'bulletin' in li.find('a').attrs['href']:
-            postfix = li.find('a').attrs['href'].split('/')[2:]
-            postfix = "/" + "/".join(postfix)
+        # 502 Server Error: Bad Gateway for url
+        # error handling => TypeError: 'bool' object is not iterable
+        if already_registered:
+            already_registered = [x['fields']['내용'] for x in already_registered if x['fields'].get('내용') ]
         else:
-            postfix = li.find('a').attrs['href'][2:]
-        prefix = "https://www.radiokorea.com/bulletin"
-        item_url = prefix + postfix
+            already_registered = []
 
-        if 'sca' in item_url:
-            continue
+        candidates = []
+        del_candidates = []
 
-        item_response = requests.get(item_url)
-        item_soup = BeautifulSoup(item_response.content, 'html.parser')
-        items = item_soup.find(class_='feature100p')
+        for li in result.find_all('li'):
+            if li.find(class_="title_subject") is not None or li.find(class_='subject') is None:
+                continue
+            subject = li.find(class_='subject').text
+            price = float(li.find(class_='price').text.replace('$', '').replace(',', ''))
+            writer = li.find(class_='writer').text
+            date = li.find(class_='date').text
 
-        if items is None:
-            items = item_soup.find(class_='feature')
-            if items is not None:
-                items = items.find_all('div', class_='item')
+            STOP = (datetime.now() - date_parse(date)).days >= 7
+            if STOP:
+                break
+
+            obj = {'제목': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date}
+
+            if li.find('a').attrs['href'] is None:
+                continue
+
+            if 'bulletin' in li.find('a').attrs['href']:
+                postfix = li.find('a').attrs['href'].split('/')[2:]
+                postfix = "/" + "/".join(postfix)
             else:
+                postfix = li.find('a').attrs['href'][2:]
+            prefix = "https://www.radiokorea.com/bulletin"
+            item_url = prefix + postfix
+            print("house url", item_url)
+            if 'sca' in item_url:
                 continue
-        else: # error handling => AttributeError: 'NoneType' object has no attribute 'find_all'
-            continue
 
-        for item in items:
-            if item.find('div', class_='title') is None or item.find('div', class_='detail') is None:
+            item_response = requests.get(item_url)
+            item_soup = BeautifulSoup(item_response.content, 'html.parser')
+            items = item_soup.find(class_='feature100p')
+
+            if items is None:
+                items = item_soup.find(class_='feature')
+                if items is not None:
+                    items = items.find_all('div', class_='item')
+                else:
+                    continue
+            else: # error handling => AttributeError: 'NoneType' object has no attribute 'find_all'
                 continue
-            titles = item.find_all('div', class_='title')
-            details = item.find_all('div', class_='detail')
 
-            for title, detail in zip(titles, details):
+            for item in items:
+                if item.find('div', class_='title') is None or item.find('div', class_='detail') is None:
+                    continue
+                titles = item.find_all('div', class_='title')
+                details = item.find_all('div', class_='detail')
 
-                title = title.text
-                detail = detail.text
+                for title, detail in zip(titles, details):
 
-                if title in ['지역', '종류', '연락처']:
-                    obj[title] = detail
+                    title = title.text
+                    detail = detail.text
 
-        desc = item_soup.find('div', class_='dscr')
+                    if title in ['지역', '종류', '연락처']:
+                        obj[title] = detail
 
-        obj['내용'] = desc.text.strip().replace('\n', '\\n').strip() if desc.text.strip().replace('\n', '\\n').strip() else "내용없음"
-        if obj['내용'] in already_registered or obj['내용'] in candidates:
-            continue
-        obj['원문 링크'] = item_url
+            desc = item_soup.find('div', class_='dscr')
 
-        if item_soup.find('div', class_='pic_large_item') is not None:
-            postfix = item_soup.find('div', class_='pic_large_item').find('img').attrs['src'][2:]
-            image_prefix = "https://www.radiokorea.com/bulletin"
-            image = image_prefix + postfix
+            obj['내용'] = desc.text.strip().replace('\n', '\\n').strip() if desc.text.strip().replace('\n', '\\n').strip() else "내용없음"
+            if obj['내용'] in already_registered or obj['내용'] in candidates:
+                continue
+            obj['원문 링크'] = item_url
+
+            if item_soup.find('div', class_='pic_large_item') is not None:
+                postfix = item_soup.find('div', class_='pic_large_item').find('img').attrs['src'][2:]
+                image_prefix = "https://www.radiokorea.com/bulletin"
+                image = image_prefix + postfix
+            else:
+                image = DEFAULT_HOUSE_IMAGE
+            image = attachment(image)
+
+            obj['image'] = [image]
+            candidates.append(obj)
+
+        print(candidates)
+        if candidates:
+            insert_line(table, candidates)
+            records = table.all(sort=['올린 날짜'])
+            if len(records) >= 410:
+                delete(records, del_candidates, table, candidates)
+            return True
         else:
-            image = DEFAULT_HOUSE_IMAGE
-        image = attachment(image)
-
-        obj['image'] = [image]
-        candidates.append(obj)
-
-    print(candidates)
-    if candidates:
-        insert_line(table, candidates)
-        records = table.all(sort=['올린 날짜'])
-        if len(records) >= 410:
-            delete(records, del_candidates, table, candidates)
-        return True
-    else:
+            return False
+    except Exception as e:
         return False
+
 
 def delete(records, del_candidates, table, candidates):
     count = 0

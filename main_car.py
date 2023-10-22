@@ -15,113 +15,117 @@ STOP = False
 
 
 def parse_page(url, base_id, table_name):
-    table = connect_to_table(API_KEY, base_id, table_name)
+    try:
+        table = connect_to_table(API_KEY, base_id, table_name)
 
-    response = requests.get(url)
-    bs4 = BeautifulSoup(response.content, 'html.parser')
-    result = bs4.find('ul', class_="board_list")
+        response = requests.get(url)
+        bs4 = BeautifulSoup(response.content, 'html.parser')
+        result = bs4.find('ul', class_="board_list")
 
-    already_registered = fetch_all(table)
+        already_registered = fetch_all(table)
 
-    # 502 Server Error: Bad Gateway for url
-    # error handling => TypeError: 'bool' object is not iterable
-    if already_registered:
-        already_registered = [x['fields']['내용'] for x in already_registered]
-    else:
-        already_registered = []
-
-    candidates = []
-    del_candidates = []
-
-    for li in result.find_all('li'):
-        if li.find(class_='title_info') is not None or li.find(class_='aoa') is not None:
-            continue
-        subject = li.find(class_='model').text
-        try:
-            age = subject.split(' ')[0]
-            age = int(age)
-        except Exception as e:
-            print('no age', subject)
-            age = 0
-        try:
-            price = float(li.find(class_='price').text.replace('$', '').replace(',', ''))
-        except Exception as e:
-            continue
-        writer = li.find(class_='seller').text
-        date = li.find(class_='date').text
-        miles = float(li.find(class_='miles').text.replace(',', '').replace('mi', ''))
-
-        STOP = (datetime.now() - date_parse(date)).days >= 7
-        if STOP:
-            break
-
-        obj = {'차량정보': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date, '주행거리': miles, '연식': age}
-
-        if li.find('a').attrs['href'] is None:
-            continue
-
-        if 'bulletin' in li.find('a').attrs['href']:
-            postfix = li.find('a').attrs['href'].split('/')[2:]
-            postfix = "/" + "/".join(postfix)
+        # 502 Server Error: Bad Gateway for url
+        # error handling => TypeError: 'bool' object is not iterable
+        if already_registered:
+            already_registered = [x['fields']['내용'] for x in already_registered]
         else:
-            postfix = li.find('a').attrs['href'][2:]
-        prefix = "https://www.radiokorea.com/bulletin"
-        item_url = prefix + postfix
+            already_registered = []
 
-        if 'sca' in item_url:
-            continue
+        candidates = []
+        del_candidates = []
 
-        item_response = requests.get(item_url)
-        item_soup = BeautifulSoup(item_response.content, 'html.parser')
-        items = item_soup.find(class_='feature100p')
+        for li in result.find_all('li'):
+            if li.find(class_='title_info') is not None or li.find(class_='aoa') is not None:
+                continue
+            subject = li.find(class_='model').text
+            try:
+                age = subject.split(' ')[0]
+                age = int(age)
+            except Exception as e:
+                print('no age', subject)
+                age = 0
+            try:
+                price = float(li.find(class_='price').text.replace('$', '').replace(',', ''))
+            except Exception as e:
+                continue
+            writer = li.find(class_='seller').text
+            date = li.find(class_='date').text
+            miles = float(li.find(class_='miles').text.replace(',', '').replace('mi', ''))
 
-        if items is None:
-            items = item_soup.find(class_='feature')
-        else:  #error test
-            continue
+            STOP = (datetime.now() - date_parse(date)).days >= 7
+            if STOP:
+                break
 
-        if items is not None:
-            item_detail = items.find('div', class_='detail')
+            obj = {'차량정보': subject, '글쓴이': writer, '가격($)': price, '올린 날짜': date, '주행거리': miles, '연식': age}
+
+            if li.find('a').attrs['href'] is None:
+                continue
+
+            if 'bulletin' in li.find('a').attrs['href']:
+                postfix = li.find('a').attrs['href'].split('/')[2:]
+                postfix = "/" + "/".join(postfix)
+            else:
+                postfix = li.find('a').attrs['href'][2:]
+            prefix = "https://www.radiokorea.com/bulletin"
+            item_url = prefix + postfix
+
+            if 'sca' in item_url:
+                continue
+
+            item_response = requests.get(item_url)
+            item_soup = BeautifulSoup(item_response.content, 'html.parser')
+            items = item_soup.find(class_='feature100p')
+
+            if items is None:
+                items = item_soup.find(class_='feature')
+            else:  #error test
+                continue
+
+            if items is not None:
+                item_detail = items.find('div', class_='detail')
+            else:
+                continue
+
+            for item in item_detail.find_all('ul'):
+                for li in item.find_all('li'):
+                    if '등록일자' in li.text:
+                        detail = li.text.split('· 등록일자:')[1]
+                        title = '등록일자'
+                    else:
+                        title, detail = li.text.split(':')
+                    title = title.replace('·', '').strip()
+                    if title in ['사고여부/타이틀', '등록일자', '연락처', '색상']:
+                        obj[title] = detail
+
+            desc = item_soup.find('div', class_='dscr')
+
+            obj['내용'] = desc.text.strip().replace('\n', '\\n').strip()
+            if obj['내용'] in already_registered or obj['내용'] in candidates:
+                continue
+            obj['원문 링크'] = item_url
+
+            if item_soup.find('div', class_='pic_large_item') is not None:
+                postfix = item_soup.find('div', class_='pic_large_item').find('img').attrs['src'][2:]
+                image_prefix = "https://www.radiokorea.com/bulletin"
+                image = image_prefix + postfix
+            else:
+                image = DEFAULT_CAR_IMAGE
+            image = attachment(image)
+
+            obj['image'] = [image]
+            candidates.append(obj)
+
+        print(candidates)
+        if candidates:
+            insert_line(table, candidates)
+            records = table.all(sort=['올린 날짜'])
+            if len(records) >= 60:
+                delete(records, del_candidates, table, candidates)
+            return True
         else:
-            continue
+            return False
 
-        for item in item_detail.find_all('ul'):
-            for li in item.find_all('li'):
-                if '등록일자' in li.text:
-                    detail = li.text.split('· 등록일자:')[1]
-                    title = '등록일자'
-                else:
-                    title, detail = li.text.split(':')
-                title = title.replace('·', '').strip()
-                if title in ['사고여부/타이틀', '등록일자', '연락처', '색상']:
-                    obj[title] = detail
-
-        desc = item_soup.find('div', class_='dscr')
-
-        obj['내용'] = desc.text.strip().replace('\n', '\\n').strip()
-        if obj['내용'] in already_registered or obj['내용'] in candidates:
-            continue
-        obj['원문 링크'] = item_url
-
-        if item_soup.find('div', class_='pic_large_item') is not None:
-            postfix = item_soup.find('div', class_='pic_large_item').find('img').attrs['src'][2:]
-            image_prefix = "https://www.radiokorea.com/bulletin"
-            image = image_prefix + postfix
-        else:
-            image = DEFAULT_CAR_IMAGE
-        image = attachment(image)
-
-        obj['image'] = [image]
-        candidates.append(obj)
-
-    print(candidates)
-    if candidates:
-        insert_line(table, candidates)
-        records = table.all(sort=['올린 날짜'])
-        if len(records) >= 60:
-            delete(records, del_candidates, table, candidates)
-        return True
-    else:
+    except Exception as e:
         return False
 
 def delete(records, del_candidates, table, candidates):
